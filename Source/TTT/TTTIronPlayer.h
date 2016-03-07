@@ -4,6 +4,7 @@
 
 #include "GameFramework/Pawn.h"
 #include "TTTPlayerInterface.h"
+#include "GameField.h"
 #include "TTTIronPlayer.generated.h"
 
 

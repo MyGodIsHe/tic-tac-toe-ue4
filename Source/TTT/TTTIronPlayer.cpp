@@ -22,7 +22,6 @@ void ATTTIronPlayer::OnTurn()
 					BestTurn = FPosition(x, y);
 					TurnPower = Power;
 				}
-				return;
 			}
 	GameMode->SetCellSign(PlayerNumber, BestTurn);
 }
