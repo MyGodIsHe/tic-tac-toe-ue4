@@ -3,10 +3,6 @@
 #include "TTT.h"
 #include "GameField.h"
 
-DEFINE_LOG_CATEGORY(YourLog);
-//UE_LOG(YourLog, Warning, TEXT("%s"), *);
-
-
 // Sets default values
 AGameField::AGameField()
 {
@@ -29,7 +25,6 @@ void AGameField::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	UE_LOG(YourLog, Warning, TEXT("OnConstruction, count %d"), GetRootComponent()->AttachChildren.Num());
 	if (!GetRootComponent()->AttachChildren.Num())
 		GenerateField();
 }

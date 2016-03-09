@@ -11,12 +11,14 @@ void ATTTIronPlayer::OnTurn()
 
 	ATTTGameMode* GameMode = (ATTTGameMode*)(GetWorld()->GetAuthGameMode());
 	FPosition BestTurn;
-	float TurnPower = 0;
-	for (int32 x = 0; x < GameMode->FieldData.Num(); x++)
-		for (int32 y = 0; y < GameMode->FieldData[x].Num(); y++)
-			if (GameMode->FieldData[x][y] == EMPTY_POSITION)
+	float TurnPower = -TField::GetMaxPoints() - 1;
+	for (int32 x = 0; x < GameMode->FieldData->SizeX; x++)
+		for (int32 y = 0; y < GameMode->FieldData->SizeY; y++)
+			if (GameMode->FieldData->Get(x, y) == EMPTY_POSITION)
 			{
-				float Power = CalcualtePower(FPosition(x, y));
+				GameMode->FieldData->Set(x, y, PlayerNumber);
+				float Power = GameMode->FieldData->GetHeuristicValue(FPosition(x, y));
+				GameMode->FieldData->Set(x, y, EMPTY_POSITION);
 				if (Power >= TurnPower)
 				{
 					BestTurn = FPosition(x, y);
@@ -24,12 +26,6 @@ void ATTTIronPlayer::OnTurn()
 				}
 			}
 	GameMode->SetCellSign(PlayerNumber, BestTurn);
-}
-
-float ATTTIronPlayer::CalcualtePower(const FPosition Position)
-{
-
-	return 0;
 }
 
 void ATTTIronPlayer::OnWin()

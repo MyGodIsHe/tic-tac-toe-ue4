@@ -4,7 +4,6 @@
 
 #include "GameFramework/Pawn.h"
 #include "TTTPlayerInterface.h"
-#include "GameField.h"
 #include "TTTIronPlayer.generated.h"
 
 
@@ -17,8 +16,6 @@ class TTT_API ATTTIronPlayer : public APawn, public TTTPlayerInterface
 	GENERATED_BODY()
 
 public:
-
-	float CalcualtePower(const FPosition Position);
 
 	virtual void OnTurn() override;
 	virtual void OnWin() override;

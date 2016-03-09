@@ -5,8 +5,6 @@
 #include "GameFramework/Actor.h"
 #include "GameField.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(YourLog, Log, All);
-
 struct FPosition
 {
 	int32 X;
