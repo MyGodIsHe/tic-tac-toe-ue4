@@ -24,6 +24,9 @@ public:
 	TField* FieldData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 DifficultyLevel;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 FieldSize;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

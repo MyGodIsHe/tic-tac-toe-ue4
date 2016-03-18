@@ -4,6 +4,7 @@
 #include "TTTPlayerController.h"
 #include "TTTIronPlayer.h"
 #include "TTTPawn.h"
+#include "GameField.h"
 #include "TTTGameMode.h"
 
 
@@ -13,8 +14,9 @@ ATTTGameMode::ATTTGameMode()
 	DefaultPawnClass = ATTTPawn::StaticClass();
 
 	
-	WinSize = TField::WinSize;
+	WinSize = 3;
 	FieldSize = 3;
+	DifficultyLevel = 3;
 }
 
 ATTTGameMode::~ATTTGameMode()
@@ -33,11 +35,11 @@ void ATTTGameMode::BeginPlay()
 
 	GameField = GetWorld()->SpawnActor<AGameField>(FVector(0), FRotator(0, 0, 0), FActorSpawnParameters());
 	GameField->Size = FieldSize;
-	FieldData = new TField(FieldSize, FieldSize);
-	TField::WinSize = WinSize;
+	FieldData = new TField(FieldSize, FieldSize, WinSize);
 
 	Players.Add(Pawn);
 	auto* AI = GetWorld()->SpawnActor<ATTTIronPlayer>(FVector(), FRotator());
+	AI->DifficultyLevel = DifficultyLevel;
 	Players.Add(AI);
 	CurrentPlayer = FMath::RandRange(0, Players.Num() - 1);
 
@@ -66,6 +68,12 @@ void ATTTGameMode::SetCellSign(const int32 PlayerNumber, const FPosition& Positi
 		for (int32 i = 0; i < Players.Num(); i++)
 			if (i != CurrentPlayer)
 				Players[i]->OnLose();
+	}
+	else if (FieldData->IsFull())
+	{
+		IsGameOver = true;
+		for (int32 i = 0; i < Players.Num(); i++)
+			Players[i]->OnLose();
 	}
 	else
 		TurnNextPlayer();

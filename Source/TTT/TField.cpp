@@ -4,18 +4,21 @@
 #include "TField.h"
 
 
-int32 TField::WinSize = 3;
-
-TField::TField(const int32 InSizeX, const int32 InSizeY)
-	: SizeX(InSizeX), SizeY(InSizeY)
+TField::TField(const int32 InSizeX, const int32 InSizeY, const int32 InWinSize)
+	: SizeX(InSizeX), SizeY(InSizeY), WinSize(InWinSize)
 {
-	check(InSizeX > 0 && InSizeY > 0);
+	check(InSizeX > 0 && InSizeY > 0 && InWinSize > 1);
 	for (int32 i = 0; i < InSizeX; i++)
 	{
 		TArray<int32> SubArray;
 		SubArray.Init(EMPTY_POSITION, InSizeY);
 		Data.Add(SubArray);
 	}
+
+	for (int32 x = 0; x < SizeX; x++)
+		for (int32 y = 0; y < SizeY; y++)
+			for (auto& i : GetLinesByPosition(FPosition(x, y)))
+				Lines.AddUnique(i);
 }
 
 int32 TField::Get(const int32 X, const int32 Y) const
@@ -65,7 +68,11 @@ bool TField::IsWinPosition(const FPosition Position) const
 
 bool TField::IsFull() const
 {
-	return false;
+	for (int32 x = 0; x < SizeX; x++)
+		for (int32 y = 0; y < SizeY; y++)
+			if (Data[x][y] == EMPTY_POSITION)
+				return false;
+	return true;
 }
 
 bool TField::AllEqual(const TArray<int32>& Array) const
@@ -127,54 +134,116 @@ TMap<int32, int32> TField::GetSpectrum(const FPosition Begin, const FPosition En
 	return Spectrum;
 }
 
-int32 TField::GetHeuristicValue(const FPosition Position) const
+
+/*
+return -1.0-1.0
+*/
+float TField::GetHeuristicValue(const int32 Player) const
+{
+	int32 Points = 0;
+	for (auto& Line : Lines)
+		if (IsValidPosition(Line.Begin) && IsValidPosition(Line.End))
+		{
+			TMap<int32, int32> Spectrum = GetSpectrum(Line.Begin, Line.End);
+			if (Spectrum.Num() == 1)
+				if (Spectrum.Contains(EMPTY_POSITION))
+					Points += Spectrum.Contains(Player) ? 1 : -1;
+			else if (Spectrum.Num() == 2)
+			{
+				if (Spectrum.Contains(EMPTY_POSITION)) // can win
+				{
+					int32 reps = 0;
+					for (auto& p : Spectrum)
+						if (p.Key != EMPTY_POSITION)
+							reps = p.Value;
+					check(reps > 0);
+					Points += (1 + reps) * (Spectrum.Contains(Player) ? 1 : -1);
+				}
+			}
+		}
+	return (float)Points / Lines.Num() * WinSize;
+}
+
+float TField::GetState(const int32 Player) const
+{
+	int32 Wins = 0;
+	int32 Losses = 0;
+	bool IsFull = false;
+	for (auto& Line : Lines)
+		if (IsValidPosition(Line.Begin) && IsValidPosition(Line.End))
+		{
+			TMap<int32, int32> Spectrum = GetSpectrum(Line.Begin, Line.End);
+			if (!IsFull && Spectrum.Contains(EMPTY_POSITION))
+				IsFull = true;
+			if (Spectrum.Num() == 1)
+				if (Spectrum.Contains(Player))
+					Wins++;
+				else if (!Spectrum.Contains(EMPTY_POSITION))
+					Losses++;
+		}
+	if (Wins && Losses)
+		return STATE_UNDEFINED;
+	if (Wins)
+		return STATE_WIN;
+	if (Losses)
+		return STATE_LOSS;
+	if (IsFull)
+		return STATE_STANDOFF;
+	return STATE_UNKNOWN;
+}
+
+TArray<FLine> TField::GetLinesByPosition(const FPosition Position) const
 {
 	int32 offset = WinSize - 1;
-	TArray<FPosition> Positions;
+	TArray<FLine> Positions;
 
 	// horizontal lines
 	for (int32 i = Position.X - offset; i <= Position.X; i++)
-	{
-		Positions.Add(FPosition(i, Position.Y));
-		Positions.Add(FPosition(i + offset, Position.Y));
-	}
+		Positions.Add(FLine(FPosition(i, Position.Y), FPosition(i + offset, Position.Y)));
 
 	// vertical lines
 	for (int32 i = Position.Y - offset; i <= Position.Y; i++)
-	{
-		Positions.Add(FPosition(Position.X, i));
-		Positions.Add(FPosition(Position.X, i + offset));
-	}
+		Positions.Add(FLine(FPosition(Position.X, i), FPosition(Position.X, i + offset)));
 
 	// diagonal lines
 	for (int32 i = -offset; i <= 0; i++)
 	{
-		Positions.Add(FPosition(Position.X + i, Position.Y + i));
-		Positions.Add(FPosition(Position.X + offset + i, Position.Y + offset + i));
-		Positions.Add(FPosition(Position.X + i, Position.Y - i));
-		Positions.Add(FPosition(Position.X + offset + i, Position.Y - offset - i));
+		Positions.Add(FLine(FPosition(Position.X + i, Position.Y + i), FPosition(Position.X + offset + i, Position.Y + offset + i)));
+		Positions.Add(FLine(FPosition(Position.X + i, Position.Y - i), FPosition(Position.X + offset + i, Position.Y - offset - i)));
 	}
-
-	int32 Points = 0;
-	int32 Player = Get(Position);
-	for (int32 i = 0; i < Positions.Num(); i+=2)
-		if (IsValidPosition(Positions[i]) && IsValidPosition(Positions[i + 1]))
-		{
-			TMap<int32, int32> Spectrum = GetSpectrum(Positions[i], Positions[i + 1]);
-			if (Spectrum.Num() == 1) // is win
-				return GetMaxPoints();
-			if (Spectrum.Num() == 2)
-			{
-				if (Spectrum.Contains(EMPTY_POSITION)) // can win
-					Points += Spectrum[Player];
-				else if (Spectrum[Player] == 1) // can lose
-					return GetMaxPoints() - 1;
-			}
-		}
-	return Points;
+	return Positions;
 }
 
-int32 TField::GetMaxPoints()
+/*
+This is guaranteed to more than it can be.
+Example for WinSize equal to 3:
+x_x_x
+_xxx_
+xxxxx
+_xxx_
+x_x_x
+*/
+int32 TField::GetMaxCalculatedPoints() const
 {
-	return 4 * WinSize * WinSize;
+	return 4 * (1 + WinSize) * WinSize;
+}
+
+int32 TField::GetZugzwangPoints() const
+{
+	return GetMaxCalculatedPoints() + 1;
+}
+
+int32 TField::GetWinPoints() const
+{
+	return GetMaxCalculatedPoints() + 2;
+}
+
+int32 TField::GetBeforeLowPoints() const
+{
+	return -1;
+}
+
+int32 TField::GetAfterHighPoints() const
+{
+	return GetWinPoints() + 1;
 }

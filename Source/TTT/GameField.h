@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "GameField.generated.h"
 
+
 struct FPosition
 {
 	int32 X;
@@ -26,6 +27,10 @@ struct FPosition
 	{
 		X = InX;
 		Y = InY;
+	}
+
+	const bool operator==(const FPosition& rv) const {
+		return X == rv.X && Y == rv.Y;
 	}
 };
 
